@@ -313,6 +313,7 @@ Source.prototype = {
         this._buddySignedOffId = proxy.connect('BuddySignedOff', Lang.bind(this, this._onBuddySignedOff));
         this._buddySignedOnId = proxy.connect('BuddySignedOn', Lang.bind(this, this._onBuddySignedOn));
         this._messageDisplayedId = proxy.connect('DisplayedImMsg', Lang.bind(this, this._onDisplayedImMessage));
+        this._chatDisplayedId = proxy.connect('DisplayedChatMsg', Lang.bind(this, this._onDisplayedChatMessage));
         this._deleteConversationId = proxy.connect('DeletingConversation', Lang.bind(this, this._onDeleteConversation));
 
         this.notify();
@@ -325,6 +326,7 @@ Source.prototype = {
         proxy.disconnect(this._buddySignedOnId);
         proxy.disconnect(this._deleteConversationId);
         proxy.disconnect(this._messageDisplayedId);
+        proxy.disconnect(this._chatDisplayedId);
         MessageTray.Source.prototype.destroy.call(this);
     },
     
@@ -463,6 +465,26 @@ Source.prototype = {
             }
         }
 
+    },
+
+    _onDisplayedChatMessage: function(emitter, account, author, text, conversation, flag) {
+
+        if (text && (this._conversation == conversation)) {
+            let direction = null;
+            if (flag == 1) {
+                direction = TelepathyClient.NotificationDirection.SENT;
+            } else if (flag == 2) {
+                direction = TelepathyClient.NotificationDirection.RECEIVED;
+            }
+            if (direction != null) {
+                let message = wrappedText(text, author, null, direction);
+                this._notification.appendMessage(message, false);
+            }
+
+            if (direction == TelepathyClient.NotificationDirection.RECEIVED) {
+                this.notify();
+            }
+        }
     }
 
 }
@@ -527,6 +549,7 @@ PidginClient.prototype = {
 
     enable: function() {
         this._displayedImMsgId = this._proxy.connect('DisplayedImMsg', Lang.bind(this, this._messageDisplayed));
+        this._displayedChatMsgId = this._proxy.connect('DisplayedChatMsg', Lang.bind(this, this._messageDisplayed));
     },
     
     disable: function() {
